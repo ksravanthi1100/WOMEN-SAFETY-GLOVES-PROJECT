@@ -1,0 +1,89 @@
+SOURCE CODE:
+#include <SoftwareSerial.h>
+25 
+#include <TinyGPS++.h>
+// GSM
+SoftwareSerial gsm(10, 11); // RX, TX
+// GPS
+SoftwareSerial gpsSerial(4, 3); // RX, TX
+TinyGPSPlus gps;
+// Pins const int 
+buttonPin = 2; const int 
+buzzerPin = 8;
+// Phone number
+String phoneNumber = "+918341737616";
+// Button state bool lastButtonState = 
+HIGH; void setup() { 
+Serial.begin(9600); gsm.begin(9600); 
+gpsSerial.begin(9600); 
+pinMode(buttonPin, INPUT_PULLUP); 
+pinMode(buzzerPin, OUTPUT);
+delay(3000);
+Serial.println("System Ready..."); // GSM 
+Initialization gsm.println("AT"); delay(1000);
+gsm.println("AT+CMGF=1"); // SMS text mode 
+delay(1000); gsm.println("AT+CSQ"); // signal 
+check delay(2000); while (gsm.available()) {
+Serial.write(gsm.read());
+} randomSeed(analogRead(A0));
+} void loop() { // Read GPS 
+continuously while 
+(gpsSerial.available()) { 
+gps.encode(gpsSerial.read());
+}
+bool currentState = digitalRead(buttonPin);
+// Detect button press if (lastButtonState == HIGH && 
+currentState == LOW) { Serial.println("SOS 
+ACTIVATED!") digitalWrite(buzzerPin, HIGH); String 
+26 
+location = getLocation(); sendSMS(location); delay(3000); 
+// IMPORTANT: wait before call makeCall();
+digitalWrite(buzzerPin, LOW);
+}
+lastButtonState = currentState;
+}
+// GET LOCATION
+String getLocation() { if 
+(gps.location.isValid()) {
+String link = "https://maps.google.com/?q="; 
+link += String(gps.location.lat(), 6); link += 
+","; link += String(gps.location.lng(), 6);
+Serial.println("GPS: " + link); return link; } 
+else {
+Serial.println("GPS not fixed, using dummy");
+// Hyderabad fallback locations int r = random(1, 5); if (r == 1) return 
+"https://maps.google.com/?q=17.4933,78.3915"; // JNTU if (r == 2) return 
+"https://maps.google.com/?q=17.4204,78.3272"; // CBIT if (r == 3) return 
+"https://maps.google.com/?q=17.5185,78.4078"; // OU if (r == 4) return 
+"https://maps.google.com/?q=17.3850,78.4867"; // Nizam return "Location 
+unavailable";
+}
+}
+// SEND SMS void 
+sendSMS(String msg) {
+Serial.println("Sending SMS..."); 
+gsm.println("AT+CMGF=1"); 
+delay(1000);
+gsm.print("AT+CMGS=\""); 
+gsm.print(phoneNumber); 
+gsm.println("\""); delay(2000); // 
+wait for >
+gsm.println("EMERGENCY ALERT!");
+27 
+gsm.print("Location: "); 
+gsm.println(msg);
+gsm.write(26); // CTRL+Z
+delay(5000);
+Serial.println("SMS SENT");
+}
+// MAKE CALL
+void makeCall() {
+Serial.println("Calling...");
+gsm.println("AT"); 
+delay(1000);
+gsm.print("ATD");
+gsm.print(phoneNumber);
+gsm.println(";");
+delay(10000); // call time
+gsm.println("ATH");
+Serial.println("CALL ENDED");
